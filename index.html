@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard - Nhóm 6</title>
+<style>
+  :root{
+    --bg:#0f172a; --card:#111827; --card2:#1f2937; --text:#e5e7eb;
+    --muted:#9ca3af; --accent:#22d3ee; --bad:#ef4444; --ok:#22c55e;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);padding:24px 16px 60px;}
+  .wrap{max-width:1000px;margin:0 auto;}
+
+  header{max-width:1000px;margin:0 auto 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;}
+  .header-left{flex:1;}
+  .header-right{background:var(--card);padding:16px 20px;border-radius:12px;border:1px solid var(--card2);min-width:250px;}
+  .header-right strong{color:var(--accent);display:block;margin-bottom:8px;font-size:15px;text-transform:uppercase;letter-spacing:.5px;}
+  .header-right .member{margin:6px 0 0 0;font-size:13px;color:var(--muted);display:flex;align-items:center;}
+  .header-right .member::before{content:"•";color:var(--accent);margin-right:8px;}
+  @media (max-width:768px){header{flex-direction:column;}.header-right{width:100%;}}
+  header h1{font-size:22px;margin:0 0 8px;line-height:1.4;}
+  .badge{display:inline-block;padding:4px 10px;border-radius:999px;background:var(--card2);color:var(--accent);font-size:12px;margin-top:6px;}
+
+  /* Đánh giá tổng quan */
+  .assess{background:var(--card);border:1px solid var(--card2);border-radius:12px;padding:16px 20px;margin-bottom:16px;}
+  .assess.bad{border-color:var(--bad);}
+  .assess.ok{border-color:var(--ok);}
+  .assess h2{margin:0 0 6px;font-size:16px;}
+  .assess .status{font-weight:700;font-size:18px;}
+  .assess.bad .status{color:var(--bad);}
+  .assess.ok .status{color:var(--ok);}
+  .assess.none .status{color:var(--muted);}
+  .assess ul{margin:8px 0 0;padding-left:20px;font-size:13px;color:var(--text);}
+  .assess li{margin:3px 0;}
+  .assess li.bad{color:var(--bad);font-weight:600;}
+  .assess li.none{color:var(--muted);}
+
+  /* Thẻ chỉ số mới nhất */
+  .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;}
+  @media (max-width:768px){.cards{grid-template-columns:repeat(2,1fr);}}
+  .mcard{background:var(--card);border:1px solid var(--card2);border-radius:12px;padding:12px;}
+  .mcard .lbl{font-size:12px;color:var(--muted);}
+  .mcard .val{font-size:22px;font-weight:700;margin:4px 0;}
+  .mcard .sub{font-size:11px;color:var(--muted);}
+  .mcard.bad{border-color:var(--bad);}
+  .mcard.bad .val,.mcard.bad .tag{color:var(--bad);}
+  .mcard .tag{font-size:12px;font-weight:600;color:var(--ok);}
+  .mcard.none .val,.mcard.none .tag{color:var(--muted);}
+
+  /* Bảng (nằm trên đồ thị, cuộn bên trong) */
+  .tbl-scroll{overflow:auto;max-height:340px;border-radius:12px;background:var(--card);margin-bottom:16px;border:1px solid var(--card2);}
+  table{width:100%;border-collapse:collapse;background:var(--card);}
+  th,td{padding:10px 12px;text-align:left;font-size:13px;border-bottom:1px solid #1f2937;white-space:nowrap;}
+  th{color:var(--muted);font-weight:600;background:var(--card2);position:sticky;top:0;z-index:1;}
+  tr:hover td{background:#161f30;}
+  td.abn{color:var(--bad);font-weight:700;}
+  td.nosig{color:var(--muted);}
+  tr.rowbad td:first-child{border-left:3px solid var(--bad);}
+  .alert-cell{color:var(--bad);font-weight:700;}
+  .normal-cell{color:var(--ok);}
+  .none-cell{color:var(--muted);}
+  .empty{margin:40px auto;text-align:center;color:var(--muted);}
+
+  /* Đồ thị */
+  .charts{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:18px;}
+  @media (max-width:768px){.charts{grid-template-columns:1fr;}}
+  .chart-box{background:var(--card);border:1px solid var(--card2);border-radius:12px;padding:12px;}
+  .chart-box h3{margin:0 0 6px;font-size:13px;color:var(--muted);font-weight:600;}
+  .chart-box canvas{width:100%;height:180px;display:block;}
+  .legend{font-size:11px;color:var(--muted);margin-top:4px;}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 4px 0 8px;vertical-align:middle;}
+
+  .note{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6;}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-left">
+    <h1>Hệ thống theo dõi sức khỏe cho người già, bệnh nhân từ xa</h1>
+    <span class="badge" id="countBadge">Đang tải...</span>
+  </div>
+  <div class="header-right">
+    <strong>Nhóm 6</strong>
+    <div class="member">Phạm Quốc Hưng</div>
+    <div class="member">Trần Anh Phong</div>
+    <div class="member">Trần Anh Phú</div>
+    <div class="member">Ngô Văn Quốc Thịnh</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="assessBox" class="assess" style="display:none;"></div>
+  <div class="cards" id="cards" style="display:none;"></div>
+
+  <!-- BẢNG (đã chuyển lên trên đồ thị) -->
+  <div class="tbl-scroll" id="tblWrap">
+    <table id="logTable">
+      <thead>
+        <tr>
+          <th>Thời gian nhận</th>
+          <th>Nhịp tim</th>
+          <th>SpO2</th>
+          <th>Nhiệt độ cơ thể</th>
+          <th>Nhiệt độ phòng</th>
+          <th>Độ ẩm</th>
+          <th>Đánh giá</th>
+        </tr>
+      </thead>
+      <tbody id="logBody"></tbody>
+    </table>
+  </div>
+  <div class="empty" id="emptyMsg" style="display:none;">Chưa nhận được dữ liệu nào từ ESP32.</div>
+
+  <!-- ĐỒ THỊ -->
+  <div class="charts" id="charts" style="display:none;">
+    <div class="chart-box"><h3>Nhịp tim (bpm)</h3><canvas id="cHR"></canvas></div>
+    <div class="chart-box"><h3>SpO2 (%)</h3><canvas id="cSpO2"></canvas></div>
+    <div class="chart-box"><h3>Nhiệt độ cơ thể (°C)</h3><canvas id="cBody"></canvas></div>
+    <div class="chart-box"><h3>Nhiệt độ phòng (°C)</h3><canvas id="cRoom"></canvas></div>
+    <div class="chart-box"><h3>Độ ẩm (%)</h3><canvas id="cHum"></canvas>
+      <div class="legend"><i style="background:#22d3ee"></i>Bình thường<i style="background:#ef4444"></i>Bất thường<i style="background:rgba(34,197,94,.25);border-radius:2px"></i>Vùng chuẩn</div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>Ngưỡng tham chiếu (người lớn, lúc nghỉ):</b>
+    Nhịp tim 60–100 bpm · SpO2 ≥ 95% (90–94%: thấp, &lt; 90%: nguy hiểm) ·
+    Nhiệt độ cơ thể 36.1–37.2 °C (37.3–38: sốt nhẹ, &gt; 38: sốt, &lt; 36.1: thấp) ·
+    Nhiệt độ phòng 20–30 °C · Độ ẩm 40–70%.
+    Giá trị 0 của nhịp tim/SpO2/nhiệt độ cơ thể được hiểu là chưa có tín hiệu đo.
+    Chỉ mang tính tham khảo, không thay thế chẩn đoán của bác sĩ.
+  </div>
+</div>
+
+<script>
+  // ===== Cấu hình =====
+  const MAX_CHART_POINTS = 40;   // số điểm tối đa trên đồ thị
+  const MAX_TABLE_ROWS = 100;    // số dòng tối đa trong bảng
+  const REFRESH_MS = 3000;       // web tự làm mới mỗi 3s
+  const OFFLINE_SEC = 30;        // quá 30s không có dữ liệu mới => mất tín hiệu
+
+  // level: 'ok' | 'bad' | 'none'
+  const RULES = {
+    heartRate(v){
+      if (v == null || v === 0) return {level:'none', text:'Chưa có tín hiệu'};
+      if (v < 50)   return {level:'bad', severe:true, text:'Nhịp tim rất chậm'};
+      if (v < 60)   return {level:'bad', text:'Nhịp tim chậm'};
+      if (v <= 100) return {level:'ok',  text:'Bình thường'};
+      if (v <= 120) return {level:'bad', text:'Nhịp tim nhanh'};
+      return {level:'bad', severe:true, text:'Nhịp tim rất nhanh'};
+    },
+    spo2(v){
+      if (v == null || v === 0) return {level:'none', text:'Chưa có tín hiệu'};
+      if (v >= 95) return {level:'ok', text:'Bình thường'};
+      if (v >= 90) return {level:'bad', text:'SpO2 thấp'};
+      return {level:'bad', severe:true, text:'SpO2 nguy hiểm (thiếu oxy)'};
+    },
+    bodyTemp(v){
+      if (v == null || v === 0) return {level:'none', text:'Chưa có tín hiệu'};
+      if (v < 35)    return {level:'bad', severe:true, text:'Hạ thân nhiệt nặng'};
+      if (v < 36.1)  return {level:'bad', text:'Nhiệt độ cơ thể thấp'};
+      if (v <= 37.2) return {level:'ok',  text:'Bình thường'};
+      if (v <= 38)   return {level:'bad', text:'Sốt nhẹ'};
+      if (v <= 39)   return {level:'bad', text:'Sốt'};
+      return {level:'bad', severe:true, text:'Sốt cao'};
+    },
+    roomTemp(v){
+      if (v == null) return {level:'none', text:'Không có dữ liệu'};
+      if (v < 20) return {level:'bad', text:'Phòng quá lạnh'};
+      if (v > 30) return {level:'bad', text:'Phòng quá nóng'};
+      return {level:'ok', text:'Bình thường'};
+    },
+    humidity(v){
+      if (v == null) return {level:'none', text:'Không có dữ liệu'};
+      if (v < 40) return {level:'bad', text:'Không khí quá khô'};
+      if (v > 70) return {level:'bad', text:'Độ ẩm quá cao'};
+      return {level:'ok', text:'Bình thường'};
+    }
+  };
+
+  const META = {
+    heartRate:{label:'Nhịp tim', unit:'bpm', ref:'60–100'},
+    spo2:{label:'SpO2', unit:'%', ref:'≥ 95'},
+    bodyTemp:{label:'Nhiệt độ cơ thể', unit:'°C', ref:'36.1–37.2'},
+    roomTemp:{label:'Nhiệt độ phòng', unit:'°C', ref:'20–30'},
+    humidity:{label:'Độ ẩm', unit:'%', ref:'40–70'}
+  };
+
+  const CHARTS = [
+    {id:'cHR',   key:'heartRate', lo:60,   hi:100},
+    {id:'cSpO2', key:'spo2',      lo:95,   hi:100},
+    {id:'cBody', key:'bodyTemp',  lo:36.1, hi:37.2},
+    {id:'cRoom', key:'roomTemp',  lo:20,   hi:30},
+    {id:'cHum',  key:'humidity',  lo:40,   hi:70}
+  ];
+
+  const num = v => (v === null || v === undefined || v === '' || isNaN(Number(v))) ? null : Number(v);
+  const KEYS = Object.keys(RULES);
+  const BODY_KEYS = ['heartRate','spo2','bodyTemp'];
+
+  function evalRecord(r){
+    const res = {};
+    KEYS.forEach(k => res[k] = RULES[k](num(r[k])));
+    const issues = KEYS.filter(k => res[k].level === 'bad');
+    const severe = issues.some(k => res[k].severe);
+    const allBodyNone = BODY_KEYS.every(k => res[k].level === 'none');
+    return {res, issues, severe, allBodyNone, bad: issues.length > 0 || !!r.alert};
+  }
+
+  // ===== Đồ thị (canvas, không cần thư viện) =====
+  function drawChart(cfg, records){
+    const canvas = document.getElementById(cfg.id);
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    if (!W || !H) return;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+
+    // bỏ các điểm "chưa có tín hiệu"
+    const pts = records
+      .map(r => ({t:new Date(r.receivedAt), v:num(r[cfg.key])}))
+      .filter(p => p.v !== null && RULES[cfg.key](p.v).level !== 'none');
+
+    ctx.font = '11px Segoe UI, sans-serif';
+    if (pts.length === 0){
+      ctx.fillStyle = '#9ca3af'; ctx.textAlign = 'center';
+      ctx.fillText('Chưa có dữ liệu', W/2, H/2); return;
+    }
+
+    const padL = 38, padR = 10, padT = 10, padB = 22;
+    const vals = pts.map(p => p.v).concat([cfg.lo, cfg.hi]);
+    let min = Math.min(...vals), max = Math.max(...vals);
+    const span = (max - min) || 1;
+    min -= span * 0.12; max += span * 0.12;
+    const x = i => padL + (pts.length === 1 ? (W-padL-padR)/2 : i * (W-padL-padR) / (pts.length-1));
+    const y = v => padT + (max - v) * (H-padT-padB) / (max - min);
+
+    // vùng chuẩn
+    ctx.fillStyle = 'rgba(34,197,94,.15)';
+    ctx.fillRect(padL, y(cfg.hi), W-padL-padR, y(cfg.lo) - y(cfg.hi));
+    ctx.strokeStyle = 'rgba(34,197,94,.5)'; ctx.setLineDash([4,4]); ctx.lineWidth = 1;
+    [cfg.lo, cfg.hi].forEach(v => { ctx.beginPath(); ctx.moveTo(padL,y(v)); ctx.lineTo(W-padR,y(v)); ctx.stroke(); });
+    ctx.setLineDash([]);
+
+    // lưới + nhãn trục Y
+    ctx.fillStyle = '#9ca3af'; ctx.textAlign = 'right'; ctx.strokeStyle = '#1f2937';
+    for (let i = 0; i <= 4; i++){
+      const v = min + (max-min) * i / 4, yy = y(v);
+      ctx.beginPath(); ctx.moveTo(padL,yy); ctx.lineTo(W-padR,yy); ctx.stroke();
+      ctx.fillText(v.toFixed(cfg.key === 'bodyTemp' ? 1 : 0), padL-6, yy+4);
+    }
+
+    // nhãn thời gian đầu/cuối
+    ctx.textAlign = 'left';
+    ctx.fillText(pts[0].t.toLocaleTimeString('vi-VN'), padL, H-6);
+    ctx.textAlign = 'right';
+    ctx.fillText(pts[pts.length-1].t.toLocaleTimeString('vi-VN'), W-padR, H-6);
+
+    // đường
+    ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2; ctx.beginPath();
+    pts.forEach((p,i) => i ? ctx.lineTo(x(i), y(p.v)) : ctx.moveTo(x(i), y(p.v)));
+    ctx.stroke();
+
+    // điểm (đỏ nếu bất thường)
+    pts.forEach((p,i) => {
+      const bad = RULES[cfg.key](p.v).level === 'bad';
+      ctx.fillStyle = bad ? '#ef4444' : '#22d3ee';
+      ctx.beginPath(); ctx.arc(x(i), y(p.v), bad ? 4 : 3, 0, Math.PI*2); ctx.fill();
+    });
+  }
+
+  // ===== Hiển thị =====
+  function showVal(r, k, ev){
+    const v = num(r[k]);
+    return (ev.res[k].level === 'none' || v === null) ? '--' : v;
+  }
+
+  function renderAssessment(latest, ev){
+    const box = document.getElementById('assessBox');
+    box.style.display = 'block';
+    let cls, status, summary;
+    if (ev.severe){ cls='bad'; status='🚨 NGUY HIỂM'; summary='Có chỉ số vượt ngưỡng nghiêm trọng, cần kiểm tra/liên hệ y tế ngay.'; }
+    else if (ev.bad){ cls='bad'; status='⚠️ CẦN CHÚ Ý'; summary='Có chỉ số bất thường, nên theo dõi sát và đo lại.'; }
+    else if (ev.allBodyNone){ cls='none'; status='⚪ CHƯA CÓ TÍN HIỆU ĐO'; summary='Chưa đo được nhịp tim, SpO2, nhiệt độ cơ thể. Hãy đặt ngón tay/cảm biến đúng vị trí.'; }
+    else { cls='ok'; status='✅ ỔN ĐỊNH'; summary='Các chỉ số đo được đều trong ngưỡng bình thường.'; }
+    box.className = 'assess ' + cls;
+
+    const items = KEYS.map(k => {
+      const e = ev.res[k];
+      return `<li class="${e.level === 'bad' ? 'bad' : (e.level === 'none' ? 'none' : '')}">${META[k].label}: ${showVal(latest,k,ev)} ${META[k].unit} — ${e.text}</li>`;
+    }).join('');
+
+    box.innerHTML = `
+      <h2>Đánh giá tình trạng hiện tại <span style="font-weight:400;color:var(--muted);font-size:12px">(${new Date(latest.receivedAt).toLocaleString('vi-VN')})</span></h2>
+      <div class="status">${status}</div>
+      <div style="font-size:13px;margin-top:4px;">${summary}</div>
+      <ul>${items}</ul>`;
+  }
+
+  function renderCards(latest, ev){
+    const el = document.getElementById('cards');
+    el.style.display = 'grid';
+    el.innerHTML = KEYS.map(k => {
+      const e = ev.res[k];
+      return `<div class="mcard ${e.level === 'bad' ? 'bad' : (e.level === 'none' ? 'none' : '')}">
+        <div class="lbl">${META[k].label}</div>
+        <div class="val">${showVal(latest,k,ev)} <span style="font-size:12px;font-weight:400">${META[k].unit}</span></div>
+        <div class="tag">${e.text}</div>
+        <div class="sub">Chuẩn: ${META[k].ref} ${META[k].unit}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderTable(records){
+    const tbody = document.getElementById('logBody');
+    const rows = records.slice().reverse().slice(0, MAX_TABLE_ROWS); // mới nhất trước
+    tbody.innerHTML = rows.map(r => {
+      const ev = evalRecord(r);
+      const cell = (k, unit) => {
+        const lv = ev.res[k].level;
+        const cls = lv === 'bad' ? 'abn' : (lv === 'none' ? 'nosig' : '');
+        const v = showVal(r, k, ev);
+        return `<td class="${cls}">${v}${v === '--' ? '' : ' ' + unit}</td>`;
+      };
+      let txt, tcls;
+      if (ev.issues.length){ txt = ev.issues.map(k => ev.res[k].text).join('; '); tcls = 'alert-cell'; }
+      else if (r.alert){ txt = 'CẢNH BÁO'; tcls = 'alert-cell'; }
+      else if (ev.allBodyNone){ txt = 'Chưa có tín hiệu đo'; tcls = 'none-cell'; }
+      else { txt = 'Bình thường'; tcls = 'normal-cell'; }
+      return `<tr class="${ev.bad ? 'rowbad' : ''}">
+        <td>${new Date(r.receivedAt).toLocaleString('vi-VN')}</td>
+        ${cell('heartRate','bpm')}${cell('spo2','%')}${cell('bodyTemp','°C')}${cell('roomTemp','°C')}${cell('humidity','%')}
+        <td class="${tcls}">${txt}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function loadData(){
+    try {
+      const res = await fetch('/api/sensor-data', {cache:'no-store'});
+      const data = await res.json();
+      const empty = document.getElementById('emptyMsg');
+      const badge = document.getElementById('countBadge');
+
+      if (data.length === 0){
+        badge.textContent = '0 bản ghi';
+        document.getElementById('logBody').innerHTML = '';
+        ['assessBox','cards','charts','tblWrap'].forEach(id => document.getElementById(id).style.display = 'none');
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      document.getElementById('tblWrap').style.display = 'block';
+
+      // sắp xếp cũ → mới
+      const sorted = data.slice().sort((a,b) => new Date(a.receivedAt) - new Date(b.receivedAt));
+      const latest = sorted[sorted.length-1];
+      const ev = evalRecord(latest);
+
+      // trạng thái kết nối
+      const ageSec = (Date.now() - new Date(latest.receivedAt)) / 1000;
+      const offline = ageSec > OFFLINE_SEC;
+      badge.textContent = data.length + ' bản ghi · ' + (offline ? '⚠ MẤT TÍN HIỆU ' + Math.round(ageSec) + 's' : '● trực tuyến');
+      badge.style.color = offline ? '#ef4444' : '';
+
+      renderAssessment(latest, ev);
+      renderCards(latest, ev);
+      renderTable(sorted);
+
+      document.getElementById('charts').style.display = 'grid';
+      const recent = sorted.slice(-MAX_CHART_POINTS);
+      CHARTS.forEach(c => drawChart(c, recent));
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  window.addEventListener('resize', loadData);
+  loadData();
+  setInterval(loadData, REFRESH_MS);
+</script>
+</body>
+</html>

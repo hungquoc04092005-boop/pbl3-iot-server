@@ -1,0 +1,14 @@
+{
+  "name": "http-sensor-server",
+  "version": "1.0.0",
+  "description": "Server HTTP nhận dữ liệu cảm biến từ ESP32 (yêu cầu A.1)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "mysql2": "^3.11.0"
+  }
+}
